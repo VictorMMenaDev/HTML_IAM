@@ -1,0 +1,13 @@
+{
+    "name": "htmlai/redesign",
+    "description": "HTML AI Redesign Tool",
+    "type": "project",
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "HtmlAI\\": "src/"
+        }
+    }
+} 

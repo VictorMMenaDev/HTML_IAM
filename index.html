@@ -1,0 +1,645 @@
+<?php
+// Solo verificar que no sea una petición POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    http_response_code(405);
+    exit('Método no permitido');
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML AI Redesign Tool</title>
+    <link href="dist/output.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        }
+        .card-gradient {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .suggestion-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .suggestion-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .code-editor {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', monospace;
+        }
+        .preview-frame {
+            background: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .loading-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-gray-200">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-12">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-blue-600 p-3 rounded-lg">
+                        <i class="fas fa-code text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold">HTML AI Redesign</h1>
+                        <p class="text-gray-400">Transforma tu código HTML con IA</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                        <i class="fas fa-cog mr-2"></i>Configuración
+                    </button>
+                    <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                        <i class="fas fa-question-circle mr-2"></i>Ayuda
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Editor Section -->
+            <div class="card-gradient rounded-xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold">Editor de Código</h2>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="codeEditor" class="code-editor w-full h-96 rounded-lg p-4 mb-4 resize-none" spellcheck="false"></textarea>
+                <div class="flex items-center justify-between">
+                    <div class="flex space-x-2">
+                        <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-upload mr-2"></i>Importar
+                        </button>
+                        <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-download mr-2"></i>Exportar
+                        </button>
+                    </div>
+                    <button id="generateBtn" class="btn-gradient px-6 py-2 rounded-lg font-medium">
+                        <i class="fas fa-magic mr-2"></i>Generar Rediseño
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card-gradient rounded-xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold">Vista Previa</h2>
+                    <div class="flex space-x-2">
+                        <button class="preview-size-btn active px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition" data-size="desktop">
+                            <i class="fas fa-desktop"></i>
+                        </button>
+                        <button class="preview-size-btn px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition" data-size="tablet">
+                            <i class="fas fa-tablet-alt"></i>
+                        </button>
+                        <button class="preview-size-btn px-3 py-1 bg-gray-800 rounded-lg hover:bg-gray-700 transition" data-size="mobile">
+                            <i class="fas fa-mobile-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-frame rounded-lg h-96 overflow-auto" id="previewFrameContainer">
+                    <iframe id="previewFrame" class="w-full h-full border-0"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Suggestions -->
+        <div class="mt-8 card-gradient rounded-xl p-6 shadow-xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">Sugerencias de IA</h2>
+                <button class="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="aiSuggestions">
+                <!-- Las sugerencias se cargarán aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-8 rounded-xl max-w-md text-center">
+            <div class="loading-spinner w-12 h-12 mx-auto mb-6"></div>
+            <h3 class="text-xl font-semibold mb-2">Generando Rediseño</h3>
+            <p class="text-gray-400 mb-2">Analizando tu código y creando mejoras...</p>
+            <p class="text-blue-400 font-medium" id="countdown">Tiempo estimado: <span id="seconds">15</span> segundos</p>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-8 rounded-xl max-w-md text-center">
+            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-check text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">¡Rediseño Listo!</h3>
+            <p class="text-gray-400 mb-6">Tu código ha sido mejorado con Tailwind CSS y Font Awesome.</p>
+            <button id="closeSuccessModal" class="btn-gradient px-6 py-2 rounded-lg font-medium">
+                Continuar al Editor
+            </button>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="configModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-8 rounded-xl max-w-2xl w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold">Configuración</h3>
+                <button id="closeConfigModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Comentarios -->
+                <div>
+                    <h4 class="text-lg font-medium mb-3">Comentarios</h4>
+                    <div class="space-y-4" id="commentsContainer">
+                        <!-- Los comentarios se cargarán aquí -->
+                    </div>
+                    <div class="mt-4">
+                        <textarea id="newComment" class="w-full bg-gray-700 rounded-lg p-3 text-gray-200" 
+                            placeholder="Escribe tu comentario aquí..." rows="3"></textarea>
+                        <button id="addComment" class="mt-2 btn-gradient px-4 py-2 rounded-lg">
+                            <i class="fas fa-plus mr-2"></i>Añadir Comentario
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Configuración de IA -->
+                <div>
+                    <h4 class="text-lg font-medium mb-3">Configuración de IA</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span>Modo Creativo</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" id="creativeMode">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>Modo Estricto</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" id="strictMode">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos del DOM
+        const codeEditor = document.getElementById('codeEditor');
+        const generateBtn = document.getElementById('generateBtn');
+        const previewFrame = document.getElementById('previewFrame');
+        const previewFrameContainer = document.getElementById('previewFrameContainer');
+        const loadingModal = document.getElementById('loadingModal');
+        const successModal = document.getElementById('successModal');
+        const closeSuccessModal = document.getElementById('closeSuccessModal');
+        const previewSizeBtns = document.querySelectorAll('.preview-size-btn');
+        const aiSuggestions = document.getElementById('aiSuggestions');
+
+        // Configuración
+        const configModal = document.getElementById('configModal');
+        const closeConfigModal = document.getElementById('closeConfigModal');
+        const newComment = document.getElementById('newComment');
+        const addComment = document.getElementById('addComment');
+        const commentsContainer = document.getElementById('commentsContainer');
+        const creativeMode = document.getElementById('creativeMode');
+        const strictMode = document.getElementById('strictMode');
+
+        // URL de la API
+        const API_URL = 'https://menaylex.com/Tools/Apis/CodeM.php'; // Cambia esto por la URL de tu servidor
+
+        // Ayuda
+        document.querySelector('button:has(i.fa-question-circle)').addEventListener('click', () => {
+            alert('Ayuda: Próximamente');
+        });
+
+        // Deshacer/Rehacer
+        let history = [];
+        let currentIndex = -1;
+
+        codeEditor.addEventListener('input', () => {
+            const currentContent = codeEditor.value;
+            if (currentContent !== history[currentIndex]) {
+                history = history.slice(0, currentIndex + 1);
+                history.push(currentContent);
+                currentIndex = history.length - 1;
+            }
+        });
+
+        document.querySelector('button:has(i.fa-undo)').addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                codeEditor.value = history[currentIndex];
+                updatePreview();
+            }
+        });
+
+        document.querySelector('button:has(i.fa-redo)').addEventListener('click', () => {
+            if (currentIndex < history.length - 1) {
+                currentIndex++;
+                codeEditor.value = history[currentIndex];
+                updatePreview();
+            }
+        });
+
+        // Importar/Exportar
+        document.querySelector('button:has(i.fa-upload)').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.html,.php';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        codeEditor.value = e.target.result;
+                        updatePreview();
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        });
+
+        document.querySelector('button:has(i.fa-download)').addEventListener('click', () => {
+            const blob = new Blob([codeEditor.value], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'redesign.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Actualizar sugerencias
+        document.querySelector('button:has(i.fa-sync-alt)').addEventListener('click', () => {
+            generateAISuggestions();
+        });
+
+        // Generar rediseño
+        generateBtn.addEventListener('click', () => {
+            if (!codeEditor.value.trim()) {
+                alert('Por favor, ingresa código HTML primero.');
+                return;
+            }
+
+            loadingModal.classList.remove('hidden');
+            let seconds = 15;
+            const countdownElement = document.getElementById('seconds');
+            
+            const countdownInterval = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+            
+            // Obtener configuración actual
+            const config = {
+                creativeMode: document.getElementById('creativeMode').checked,
+                strictMode: document.getElementById('strictMode').checked
+            };
+            
+            // Obtener comentarios actuales
+            const comentarios = JSON.parse(localStorage.getItem('comments') || '[]');
+            
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    'html': codeEditor.value,
+                    'solicitud': 'Mejora el diseño usando Tailwind CSS y Font Awesome',
+                    'config': config,
+                    'comentarios': comentarios
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                clearInterval(countdownInterval);
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                if (data.html) {
+                    codeEditor.value = data.html;
+                    updatePreview();
+                    loadingModal.classList.add('hidden');
+                    successModal.classList.remove('hidden');
+                } else {
+                    throw new Error('No se recibió HTML modificado');
+                }
+            })
+            .catch(error => {
+                clearInterval(countdownInterval);
+                console.error('Error:', error);
+                alert('Error al generar el rediseño: ' + error.message);
+                loadingModal.classList.add('hidden');
+            });
+        });
+
+        // Tamaño de vista previa
+        previewSizeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const size = btn.dataset.size;
+                previewSizeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                switch(size) {
+                    case 'desktop':
+                        previewFrameContainer.classList.remove('max-w-md', 'max-w-xs');
+                        previewFrameContainer.classList.add('w-full');
+                        break;
+                    case 'tablet':
+                        previewFrameContainer.classList.remove('max-w-xs');
+                        previewFrameContainer.classList.add('max-w-md', 'mx-auto');
+                        break;
+                    case 'mobile':
+                        previewFrameContainer.classList.remove('max-w-md');
+                        previewFrameContainer.classList.add('max-w-xs', 'mx-auto');
+                        break;
+                }
+            });
+        });
+
+        // Cerrar modal de éxito
+        closeSuccessModal.addEventListener('click', () => {
+            successModal.classList.add('hidden');
+        });
+
+        // Actualizar vista previa
+        function updatePreview() {
+            const code = codeEditor.value;
+            const blob = new Blob([code], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            previewFrame.src = url;
+        }
+
+        // Generar sugerencias de IA
+        function generateAISuggestions() {
+            if (!codeEditor.value.trim()) {
+                alert('Por favor, ingresa código HTML primero.');
+                return;
+            }
+
+            const suggestions = [
+                {
+                    title: "Diseño Moderno",
+                    description: "Añade un diseño moderno con gradientes y efectos de hover",
+                    icon: "fas fa-paint-brush",
+                    prompt: "Mejora el diseño con un aspecto moderno usando gradientes, efectos de hover y transiciones suaves. Añade sombras y bordes redondeados para dar profundidad."
+                },
+                {
+                    title: "Responsive",
+                    description: "Optimiza el diseño para todos los dispositivos",
+                    icon: "fas fa-mobile-alt",
+                    prompt: "Haz que el diseño sea completamente responsive usando el sistema de grid de Tailwind. Asegura que se vea bien en móviles, tablets y escritorio."
+                },
+                {
+                    title: "Accesibilidad",
+                    description: "Mejora la accesibilidad del sitio",
+                    icon: "fas fa-universal-access",
+                    prompt: "Mejora la accesibilidad del sitio añadiendo contraste adecuado, etiquetas ARIA, y estructura semántica correcta."
+                }
+            ];
+
+            let html = '';
+            suggestions.forEach((suggestion, index) => {
+                html += `
+                    <div class="suggestion-card bg-gray-800 rounded-lg p-4">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <i class="${suggestion.icon} text-blue-500"></i>
+                            <h3 class="font-semibold">${suggestion.title}</h3>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-3">${suggestion.description}</p>
+                        <button class="w-full px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition apply-suggestion" data-index="${index}">
+                            Aplicar Sugerencia
+                        </button>
+                    </div>
+                `;
+            });
+
+            aiSuggestions.innerHTML = html;
+
+            // Añadir event listeners a los botones de sugerencias
+            document.querySelectorAll('.apply-suggestion').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    applySuggestion(suggestions[index].prompt);
+                });
+            });
+        }
+
+        // Aplicar sugerencia
+        function applySuggestion(prompt) {
+            loadingModal.classList.remove('hidden');
+            let seconds = 15;
+            const countdownElement = document.getElementById('seconds');
+            
+            const countdownInterval = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+            
+            // Obtener configuración actual
+            const config = {
+                creativeMode: document.getElementById('creativeMode').checked,
+                strictMode: document.getElementById('strictMode').checked
+            };
+            
+            // Obtener comentarios actuales
+            const comentarios = JSON.parse(localStorage.getItem('comments') || '[]');
+            
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    'html': codeEditor.value,
+                    'solicitud': prompt,
+                    'config': config,
+                    'comentarios': comentarios
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                clearInterval(countdownInterval);
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                if (data.html) {
+                    codeEditor.value = data.html;
+                    updatePreview();
+                    loadingModal.classList.add('hidden');
+                    successModal.classList.remove('hidden');
+                } else {
+                    throw new Error('No se recibió HTML modificado');
+                }
+            })
+            .catch(error => {
+                clearInterval(countdownInterval);
+                console.error('Error:', error);
+                alert('Error al aplicar la sugerencia: ' + error.message);
+                loadingModal.classList.add('hidden');
+            });
+        }
+
+        // Inicializar
+        codeEditor.addEventListener('input', updatePreview);
+        generateAISuggestions();
+
+        // Abrir modal de configuración
+        document.querySelector('button:has(i.fa-cog)').addEventListener('click', () => {
+            configModal.classList.remove('hidden');
+            loadComments();
+        });
+
+        // Cerrar modal de configuración
+        closeConfigModal.addEventListener('click', () => {
+            configModal.classList.add('hidden');
+        });
+
+        // Cerrar modal al hacer clic fuera
+        configModal.addEventListener('click', (e) => {
+            if (e.target === configModal) {
+                configModal.classList.add('hidden');
+            }
+        });
+
+        // Cargar comentarios guardados
+        function loadComments() {
+            const comments = JSON.parse(localStorage.getItem('comments') || '[]');
+            commentsContainer.innerHTML = '';
+            
+            comments.forEach((comment, index) => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'bg-gray-700 rounded-lg p-4';
+                commentElement.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-gray-200">${comment.text}</p>
+                        <button class="delete-comment text-red-500 hover:text-red-400" data-index="${index}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-400">
+                        ${new Date(comment.date).toLocaleString()}
+                    </div>
+                `;
+                commentsContainer.appendChild(commentElement);
+            });
+
+            // Añadir event listeners a los botones de eliminar
+            document.querySelectorAll('.delete-comment').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    deleteComment(index);
+                });
+            });
+        }
+
+        // Añadir nuevo comentario
+        addComment.addEventListener('click', () => {
+            const commentText = newComment.value.trim();
+            if (commentText) {
+                const comments = JSON.parse(localStorage.getItem('comments') || '[]');
+                comments.push({
+                    text: commentText,
+                    date: new Date().toISOString()
+                });
+                localStorage.setItem('comments', JSON.stringify(comments));
+                newComment.value = '';
+                loadComments();
+            }
+        });
+
+        // Eliminar comentario
+        function deleteComment(index) {
+            const comments = JSON.parse(localStorage.getItem('comments') || '[]');
+            comments.splice(index, 1);
+            localStorage.setItem('comments', JSON.stringify(comments));
+            loadComments();
+        }
+
+        // Guardar configuración de IA
+        creativeMode.addEventListener('change', saveConfig);
+        strictMode.addEventListener('change', saveConfig);
+
+        function saveConfig() {
+            const config = {
+                creativeMode: creativeMode.checked,
+                strictMode: strictMode.checked
+            };
+            localStorage.setItem('aiConfig', JSON.stringify(config));
+        }
+
+        // Cargar configuración guardada
+        function loadConfig() {
+            const config = JSON.parse(localStorage.getItem('aiConfig') || '{"creativeMode":false,"strictMode":false}');
+            creativeMode.checked = config.creativeMode;
+            strictMode.checked = config.strictMode;
+        }
+
+        // Cargar configuración al iniciar
+        loadConfig();
+    </script>
+</body>
+</html>
